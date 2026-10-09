@@ -1,0 +1,88 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Node {
+    string song;
+    Node *next, *prev;
+};
+
+Node *head = NULL;
+
+void add() {
+    Node *p = new Node;
+    cin >> p->song;
+
+    if (!head) {
+        head = p;
+        p->next = p->prev = p;
+    } else {
+        Node *l = head->prev;
+        p->next = head;
+        p->prev = l;
+        l->next = p;
+        head->prev = p;
+    }
+}
+
+void del() {
+    string s;
+    cin >> s;
+
+    if (!head)
+        return;
+
+    Node *p = head;
+
+    do {
+        if (p->song == s) {
+            if (p->next == p) {
+                head = NULL;
+            } else {
+                p->prev->next = p->next;
+                p->next->prev = p->prev;
+
+                if (p == head)
+                    head = p->next;
+            }
+
+            delete p;
+            return;
+        }
+
+        p = p->next;
+    } while (p != head);
+}
+
+void display() {
+    if (!head)
+        return;
+
+    Node *p = head;
+
+    do {
+        cout << p->song << " ";
+        p = p->next;
+    } while (p != head);
+
+    cout << endl;
+}
+
+int main() {
+    int ch;
+
+    do {
+        cout << "\n1.Add 2.Delete 3.Display 4.Exit\n";
+        cin >> ch;
+
+        if (ch == 1)
+            add();
+        else if (ch == 2)
+            del();
+        else if (ch == 3)
+            display();
+
+    } while (ch != 4);
+
+    return 0;
+}

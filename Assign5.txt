@@ -1,0 +1,74 @@
+
+
+#include <iostream>
+using namespace std;
+
+struct Node {
+    int player;
+    Node* next;
+};
+
+Node* cur = NULL;
+
+void add() {
+    Node* p = new Node;
+    cin >> p->player;
+
+    if (!cur) {
+        cur = p;
+        p->next = p;
+    } else {
+        p->next = cur->next;
+        cur->next = p;
+    }
+}
+
+void remove() {
+    if (!cur)
+        return;
+
+    Node* t = cur;
+
+    while (t->next != cur)
+        t = t->next;
+
+    if (t == cur) {
+        delete cur;
+        cur = NULL;
+    } else {
+        t->next = cur->next;
+        delete cur;
+        cur = t->next;
+    }
+}
+
+void nextPlayer() {
+    if (cur)
+        cur = cur->next;
+}
+
+void display() {
+    if (cur)
+        cout << "Current Player: " << cur->player << endl;
+}
+
+int main() {
+    int ch;
+
+    do {
+        cout << "\n1.Add 2.Remove 3.Next 4.Display 5.Exit\n";
+        cin >> ch;
+
+        if (ch == 1)
+            add();
+        else if (ch == 2)
+            remove();
+        else if (ch == 3)
+            nextPlayer();
+        else if (ch == 4)
+            display();
+
+    } while (ch != 5);
+
+    return 0;
+}

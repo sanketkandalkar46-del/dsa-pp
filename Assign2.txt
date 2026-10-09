@@ -1,0 +1,74 @@
+python
+```
+
+def linear_search(books, key):
+    for i in range(len(books)):
+        if books[i] == key:
+            return i
+    return -1
+
+def binary_search(books, key):
+    low = 0
+    high = len(books) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+
+        if books[mid] == key:
+            return mid
+        elif key < books[mid]:
+            high = mid - 1
+        else:
+            low = mid + 1
+
+    return -1
+
+n = int(input("Enter number of books: "))
+books = []
+
+print("Enter book IDs in sorted order:")
+for i in range(n):
+    book_id = int(input())
+    books.append(book_id)
+
+print("\nBook IDs:", books)
+
+key = int(input("\nEnter book ID to search: "))
+
+print("\n--- SEARCH MENU ---")
+print("1. Linear Search")
+print("2. Binary Search")
+
+choice = int(input("Enter your choice: "))
+
+if choice == 1:
+    position = linear_search(books, key)
+elif choice == 2:
+    position = binary_search(books, key)
+else:
+    print("Invalid choice!")
+    position = -1
+
+if position != -1:
+    print("Book Available at location:", position + 1)
+else:
+    print("Book Not Available")
+
+
+
+
+
+OUTPUT:
+Enternumberofbooks:5
+EnterbookIDsinsortedorder:
+101
+105
+110
+115
+120
+BookIDs: [101,105,110,115,120]
+EnterbookIDtosearch:115---SEARCHMENU--
+1.LinearSearch
+2.BinarySearch
+Enteryourchoice:2
+BookAvailableat location:

@@ -1,0 +1,215 @@
+cpp
+```
+
+#include <iostream>
+#include <string>
+using namespace std;
+
+struct Node {
+    int PRN;
+    string name;
+    Node* next;
+};
+
+class PinnacleClub {
+    Node* head = NULL;
+
+public:
+    // Add President
+    void addPresident() {
+        Node* n = new Node;
+
+        cout << "Enter PRN and Name: ";
+        cin >> n->PRN >> n->name;
+
+        n->next = head;
+        head = n;
+
+        cout << "President added.\n";
+    }
+
+    // Add Member / Secretary at end
+    void addEnd(string type) {
+        Node* n = new Node;
+
+        cout << "Enter " << type << " PRN and Name: ";
+        cin >> n->PRN >> n->name;
+
+        n->next = NULL;
+
+        if (head == NULL)
+            head = n;
+        else {
+            Node* temp = head;
+
+            while (temp->next != NULL)
+                temp = temp->next;
+
+            temp->next = n;
+        }
+
+        cout << type << " added.\n";
+    }
+
+    // Delete President
+    void deletePresident() {
+        if (head == NULL) {
+            cout << "Club is empty.\n";
+            return;
+        }
+
+        Node* temp = head;
+        head = head->next;
+        delete temp;
+
+        cout << "President deleted.\n";
+    }
+
+    // Delete Secretary
+    void deleteSecretary() {
+        if (head == NULL) {
+            cout << "Club is empty.\n";
+            return;
+        }
+
+        if (head->next == NULL) {
+            delete head;
+            head = NULL;
+        } else {
+            Node* temp = head;
+
+            while (temp->next->next != NULL)
+                temp = temp->next;
+
+            delete temp->next;
+            temp->next = NULL;
+        }
+
+        cout << "Secretary deleted.\n";
+    }
+
+    // Delete Member by PRN
+    void deleteMember() {
+        int prn;
+        cout << "Enter Member PRN: ";
+        cin >> prn;
+
+        if (head == NULL) {
+            cout << "Club is empty.\n";
+            return;
+        }
+
+        Node* temp = head;
+
+        while (temp->next != NULL && temp->next->PRN != prn)
+            temp = temp->next;
+
+        if (temp->next == NULL) {
+            cout << "Member not found.\n";
+            return;
+        }
+
+        Node* d = temp->next;
+        temp->next = d->next;
+        delete d;
+
+        cout << "Member deleted.\n";
+    }
+
+    // Count Members
+    int countMembers() {
+        int count = 0;
+
+        for (Node* temp = head; temp != NULL; temp = temp->next)
+            count++;
+
+        return count;
+    }
+
+    // Display
+    void display() {
+        if (head == NULL) {
+            cout << "Club is empty.\n";
+            return;
+        }
+
+        Node* temp = head;
+
+        while (temp != NULL) {
+            if (temp == head)
+                cout << "President : ";
+            else if (temp->next == NULL)
+                cout << "Secretary : ";
+            else
+                cout << "Member : ";
+
+            cout << temp->PRN << " " << temp->name << endl;
+
+            temp = temp->next;
+        }
+    }
+};
+
+int main() {
+    PinnacleClub club;
+    int choice;
+
+    do {
+        cout << "\n1. Add President"
+             << "\n2. Add Secretary"
+             << "\n3. Add Member"
+             << "\n4. Delete President"
+             << "\n5. Delete Secretary"
+             << "\n6. Delete Member"
+             << "\n7. Count Members"
+             << "\n8. Display"
+             << "\n9. Exit"
+             << "\nChoice: ";
+
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                club.addPresident();
+                break;
+
+            case 2:
+                club.addEnd("Secretary");
+                break;
+
+            case 3:
+                club.addEnd("Member");
+                break;
+
+            case 4:
+                club.deletePresident();
+                break;
+
+            case 5:
+                club.deleteSecretary();
+                break;
+
+            case 6:
+                club.deleteMember();
+                break;
+
+            case 7:
+                cout << "Total Members = " << club.countMembers() << endl;
+                break;
+
+            case 8:
+                club.display();
+                break;
+
+            case 9:
+                cout << "Exit";
+                break;
+
+            default:
+                cout << "Invalid choice";
+        }
+
+    } while (choice != 9);
+
+    return 0;
+}
