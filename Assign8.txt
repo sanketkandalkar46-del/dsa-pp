@@ -1,0 +1,104 @@
+#include <iostream>
+using namespace std;
+
+#define M 5
+
+class PizzaQueue {
+    int queue[M];
+    int front, rear;
+
+public:
+    PizzaQueue() {
+        front = rear = -1;
+    }
+
+    void placeOrder(int order) {
+        if ((rear + 1) % M == front) {
+            cout << "Queue is Full\n";
+            return;
+        }
+
+        if (front == -1)
+            front = 0;
+
+        rear = (rear + 1) % M;
+        queue[rear] = order;
+
+        cout << "Order " << order << " placed.\n";
+    }
+
+    void serveOrder() {
+        if (front == -1) {
+            cout << "No orders to serve.\n";
+            return;
+        }
+
+        cout << "Order " << queue[front] << " served.\n";
+
+        if (front == rear)
+            front = rear = -1;
+        else
+            front = (front + 1) % M;
+    }
+
+    void display() {
+        if (front == -1) {
+            cout << "No orders.\n";
+            return;
+        }
+
+        cout << "Orders: ";
+        int i = front;
+
+        while (true) {
+            cout << queue[i] << " ";
+
+            if (i == rear)
+                break;
+
+            i = (i + 1) % M;
+        }
+
+        cout << endl;
+    }
+};
+
+int main() {
+    PizzaQueue p;
+    int choice, order;
+
+    do {
+        cout << "\n1. Place Order";
+        cout << "\n2. Serve Order";
+        cout << "\n3. Display Orders";
+        cout << "\n4. Exit";
+        cout << "\nEnter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Enter Order Number: ";
+                cin >> order;
+                p.placeOrder(order);
+                break;
+
+            case 2:
+                p.serveOrder();
+                break;
+
+            case 3:
+                p.display();
+                break;
+
+            case 4:
+                cout << "Exiting...";
+                break;
+
+            default:
+                cout << "Invalid choice";
+        }
+
+    } while (choice != 4);
+
+    return 0;
+}

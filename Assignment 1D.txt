@@ -1,0 +1,64 @@
+python
+```Assignment 1:
+Program to store and manipulate student records using 1D and 2D
+arrays.implement insertion,deletion and searching operations in an
+array
+
+
+
+student = []
+
+n = int(input("Enter no of students: "))
+
+for i in range(n):
+    roll = int(input("Enter roll no: "))
+    name = input("Enter a name: ")
+    marks = float(input("Enter marks: "))
+    student.append([roll, name, marks])
+
+while True:
+    print("\n...Menu...")
+    print("1. Display records")
+    print("2. Insert record")
+    print("3. Delete record")
+    print("4. Search record")
+    print("5. Exit")
+
+    choice = int(input("Enter choice: "))
+
+    if choice == 1:
+        for s in student:
+            print(s)
+
+    elif choice == 2:
+        roll = int(input("Enter roll no: "))
+        name = input("Enter name: ")
+        marks = float(input("Enter marks: "))
+        student.append([roll, name, marks])
+        print("Record inserted")
+
+    elif choice == 3:
+        roll = int(input("Enter roll no to delete: "))
+        for s in student:
+            if s[0] == roll:
+                student.remove(s)
+                print("Record deleted")
+                break
+        else:
+            print("Record not found")
+
+    elif choice == 4:
+        r = int(input("Enter roll no to search: "))
+        for s in student:
+            if s[0] == r:
+                print("Record is found")
+                print(s)
+                break
+        else:
+            print("Record not found")
+
+    elif choice == 5:
+        break
+
+    else:
+        print("Invalid choice")
