@@ -1,0 +1,120 @@
+======================================================================
+PRACTICAL 2: Process Management - fork(), wait(), Zombie and Orphan
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Demonstrate fork() and wait(). Parent sorts integers (ascending) and waits for the child, which sorts them
+(descending). Also demonstrate ZOMBIE and ORPHAN process states.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p2 && cd ~/os/p2
+nano process_sort.c       # paste code 1
+nano zombie_demo.c        # paste code 2
+nano orphan_demo.c        # paste code 3
+
+# --- Part A: fork + wait + sorting ---
+gcc process_sort.c -o process_sort
+./process_sort
+
+# --- Part B: Zombie (open 2 terminals, or use & as below) ---
+gcc zombie_demo.c -o zombie_demo
+./zombie_demo &                         # run in background
+ps -o pid,ppid,stat,cmd --ppid $!       # within 15 seconds: STAT 'Z' = zombie
+
+# --- Part C: Orphan ---
+gcc orphan_demo.c -o orphan_demo
+./orphan_demo                           # child's PPID changes to 1 (init/systemd)
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: process_sort.c -----
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void sort(int a[], int n, int asc) {
+    for (int i = 0; i < n - 1; i++)
+        for (int j = 0; j < n - i - 1; j++)
+            if (asc ? a[j] > a[j+1] : a[j] < a[j+1]) {
+                int t = a[j]; a[j] = a[j+1]; a[j+1] = t;
+            }
+}
+void show(char *s, int a[], int n) {
+    printf("%s", s);
+    for (int i = 0; i < n; i++) printf("%d ", a[i]);
+    printf("\n");
+}
+int main() {
+    int a[50], n;
+    printf("Enter n: "); scanf("%d", &n);
+    printf("Enter %d numbers: ", n);
+    for (int i = 0; i < n; i++) scanf("%d", &a[i]);
+
+    if (fork() == 0) {                  /* child */
+        sort(a, n, 0); show("Child (descending): ", a, n);
+        return 0;
+    }
+    sort(a, n, 1); show("Parent (ascending): ", a, n);
+    wait(NULL);                         /* parent waits for child */
+    printf("Child finished.\n");
+}
+
+----- File name: zombie_demo.c -----
+#include <stdio.h>
+#include <unistd.h>
+int main() {
+    if (fork() == 0) { printf("Child exits now\n"); return 0; }
+    printf("Parent sleeping 15s, no wait() -> child is zombie\n");
+    sleep(15);
+}
+
+----- File name: orphan_demo.c -----
+#include <stdio.h>
+#include <unistd.h>
+int main() {
+    if (fork() == 0) {
+        printf("Child: PPID before = %d\n", getppid());
+        sleep(3);
+        printf("Child: PPID after  = %d\n", getppid());
+        return 0;
+    }
+    printf("Parent exits\n");
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- Part A: process_sort (input: 5 numbers 64 25 12 22 11) ---
+compiled OK
+Enter n: 5
+Enter 5 numbers: 64 25 12 22 11
+Parent (ascending): 11 12 22 25 64 
+Child (descending): 64 25 22 12 11 
+Child finished.
+
+--- Part B: zombie_demo (STAT Z = defunct = zombie) ---
+Child exits now
+Parent sleeping 15s, no wait() -> child is zombie
+--- ps output while parent sleeps ---
+  PID  PPID STAT CMD
+  128   126 Z+   [zombie_demo] <defunct>
+
+--- Part C: orphan_demo (child's PPID becomes 1 after parent exits) ---
+Child: PPID before = 131
+Parent exits
+
+(shell prompt returned; waiting for child...)
+Child: PPID after  = 1
+
+======================================================================
+NOTES
+======================================================================
+Zombie  = child finished, but parent has not called wait() yet (STAT shows Z / <defunct>).
+Orphan  = parent finished before child; child is adopted by init/systemd (PPID = 1; on some Ubuntu desktops it may be another PID like your user systemd).
+PIDs in your output will be different - that is normal.

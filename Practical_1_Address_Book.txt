@@ -1,0 +1,232 @@
+======================================================================
+PRACTICAL 1: Shell Programming - Address Book
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Write a shell script to implement an address book with: Create, View, Insert, Delete, Modify, Exit.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+sudo apt update
+sudo apt install build-essential -y     # (only once)
+mkdir -p ~/os && cd ~/os
+nano addressbook.sh                     # paste the code below, Ctrl+O, Enter, Ctrl+X to save
+chmod +x addressbook.sh                 # give permission to run
+./addressbook.sh                        # run the script
+cat addressbook.txt                     # (optional) see the data file
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: addressbook.sh -----
+#!/usr/bin/env bash
+
+DATA_FILE="addressbook.txt"
+
+create_book() {
+    if [[ -e "$DATA_FILE" ]]; then
+        read -r -p "File exists. Replace it? (y/n): " answer
+        [[ "$answer" == "y" || "$answer" == "Y" ]] || return
+    fi
+    printf "NAME | PHONE | EMAIL\n" > "$DATA_FILE"
+    echo "Address book created: $DATA_FILE"
+}
+
+view_book() {
+    if [[ ! -f "$DATA_FILE" ]]; then
+        echo "Address book does not exist. Choose option 1 first."
+        return
+    fi
+    cat "$DATA_FILE"
+}
+
+insert_record() {
+    if [[ ! -f "$DATA_FILE" ]]; then
+        echo "Address book does not exist. Choose option 1 first."
+        return
+    fi
+    read -r -p "Enter name: " name
+    read -r -p "Enter phone: " phone
+    read -r -p "Enter email: " email
+    printf "%s | %s | %s\n" "$name" "$phone" "$email" >> "$DATA_FILE"
+    echo "Record inserted."
+}
+
+delete_record() {
+    if [[ ! -f "$DATA_FILE" ]]; then
+        echo "Address book does not exist. Choose option 1 first."
+        return
+    fi
+    read -r -p "Enter the exact name to delete: " name
+    tmp_file=$(mktemp)
+    awk -F' \\| ' -v target="$name" 'NR == 1 || $1 != target' "$DATA_FILE" > "$tmp_file"
+    if cmp -s "$DATA_FILE" "$tmp_file"; then
+        echo "No matching record found."
+        rm -f "$tmp_file"
+    else
+        mv "$tmp_file" "$DATA_FILE"
+        echo "Record deleted."
+    fi
+}
+
+modify_record() {
+    if [[ ! -f "$DATA_FILE" ]]; then
+        echo "Address book does not exist. Choose option 1 first."
+        return
+    fi
+    read -r -p "Enter the exact name to modify: " old_name
+    if ! awk -F' \\| ' -v target="$old_name" 'NR > 1 && $1 == target {found=1} END {exit !found}' "$DATA_FILE"; then
+        echo "No matching record found."
+        return
+    fi
+    read -r -p "Enter new name: " new_name
+    read -r -p "Enter new phone: " new_phone
+    read -r -p "Enter new email: " new_email
+    tmp_file=$(mktemp)
+    awk -F' \\| ' -v old="$old_name" -v new="$new_name" -v phone="$new_phone" -v email="$new_email" '
+        NR == 1 {print; next}
+        $1 == old {printf "%s | %s | %s\n", new, phone, email; next}
+        {print}
+    ' "$DATA_FILE" > "$tmp_file"
+    mv "$tmp_file" "$DATA_FILE"
+    echo "Record modified."
+}
+
+while true; do
+    echo
+    echo "===== ADDRESS BOOK ====="
+    echo "1. Create address book"
+    echo "2. View address book"
+    echo "3. Insert a record"
+    echo "4. Delete a record"
+    echo "5. Modify a record"
+    echo "6. Exit"
+    read -r -p "Enter choice: " choice
+    case "$choice" in
+        1) create_book ;;
+        2) view_book ;;
+        3) insert_record ;;
+        4) delete_record ;;
+        5) modify_record ;;
+        6) echo "Exiting address book."; break ;;
+        *) echo "Invalid choice. Enter a number from 1 to 6." ;;
+    esac
+done
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 1
+Address book created: addressbook.txt
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 3
+Enter name: Rahul Patil
+Enter phone: 9876543210
+Enter email: rahul@gmail.com
+Record inserted.
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 3
+Enter name: Sneha Joshi
+Enter phone: 9123456780
+Enter email: sneha@gmail.com
+Record inserted.
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 2
+NAME | PHONE | EMAIL
+Rahul Patil | 9876543210 | rahul@gmail.com
+Sneha Joshi | 9123456780 | sneha@gmail.com
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 5
+Enter the exact name to modify: Sneha Joshi
+Enter new name: Sneha Kulkarni
+Enter new phone: 9123456799
+Enter new email: sneha.k@gmail.com
+Record modified.
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 2
+NAME | PHONE | EMAIL
+Rahul Patil | 9876543210 | rahul@gmail.com
+Sneha Kulkarni | 9123456799 | sneha.k@gmail.com
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 4
+Enter the exact name to delete: Rahul Patil
+Record deleted.
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 2
+NAME | PHONE | EMAIL
+Sneha Kulkarni | 9123456799 | sneha.k@gmail.com
+
+===== ADDRESS BOOK =====
+1. Create address book
+2. View address book
+3. Insert a record
+4. Delete a record
+5. Modify a record
+6. Exit
+Enter choice: 6
+Exiting address book.
+
+======================================================================
+NOTES
+======================================================================
+Menu: 1=Create 2=View 3=Insert 4=Delete 5=Modify 6=Exit. Create (option 1) must be done first.

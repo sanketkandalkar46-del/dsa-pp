@@ -1,0 +1,139 @@
+======================================================================
+PRACTICAL 5: Deadlock Avoidance - Banker's Algorithm
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Implement the Banker's Algorithm to check whether the system is in a safe state and print the safe sequence.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p5 && cd ~/os/p5
+nano bankers.c
+gcc bankers.c -o bankers
+./bankers
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: bankers.c -----
+#include <stdio.h>
+
+#define MAXP 10
+#define MAXR 10
+
+int main(void) {
+    int n, m;
+    int alloc[MAXP][MAXR], max[MAXP][MAXR], need[MAXP][MAXR];
+    int available[MAXR], work[MAXR], finish[MAXP] = {0}, safe[MAXP];
+    int count = 0;
+
+    printf("Enter number of processes: ");
+    if (scanf("%d", &n) != 1 || n < 1 || n > MAXP) {
+        printf("Invalid process count (1-%d).\n", MAXP);
+        return 1;
+    }
+    printf("Enter number of resource types: ");
+    if (scanf("%d", &m) != 1 || m < 1 || m > MAXR) {
+        printf("Invalid resource count (1-%d).\n", MAXR);
+        return 1;
+    }
+
+    printf("Enter Allocation matrix:\n");
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            if (scanf("%d", &alloc[i][j]) != 1 || alloc[i][j] < 0) {
+                printf("Invalid allocation value.\n"); return 1;
+            }
+
+    printf("Enter Max matrix:\n");
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            if (scanf("%d", &max[i][j]) != 1 || max[i][j] < alloc[i][j]) {
+                printf("Invalid maximum: Max must be >= Allocation.\n"); return 1;
+            }
+
+    printf("Enter Available resources:\n");
+    for (int j = 0; j < m; j++)
+        if (scanf("%d", &available[j]) != 1 || available[j] < 0) {
+            printf("Invalid available resource value.\n"); return 1;
+        }
+
+    printf("Need matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            need[i][j] = max[i][j] - alloc[i][j];
+            printf("%d%s", need[i][j], j == m - 1 ? "\n" : " ");
+        }
+    }
+
+    for (int j = 0; j < m; j++) work[j] = available[j];
+
+    while (count < n) {
+        int found = 0;
+        for (int i = 0; i < n; i++) {
+            if (finish[i]) continue;
+            int possible = 1;
+            for (int j = 0; j < m; j++)
+                if (need[i][j] > work[j]) { possible = 0; break; }
+
+            if (possible) {
+                for (int j = 0; j < m; j++) work[j] += alloc[i][j];
+                safe[count++] = i;
+                finish[i] = 1;
+                found = 1;
+            }
+        }
+        if (!found) break;
+    }
+
+    if (count == n) {
+        printf("System is in a SAFE state.\nSafe sequence: ");
+        for (int i = 0; i < n; i++)
+            printf("P%d%s", safe[i], i == n - 1 ? "\n" : " -> ");
+    } else {
+        printf("System is in an UNSAFE state. No safe sequence exists for the given data.\n");
+    }
+    return 0;
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+$ gcc bankers.c -o bankers
+$ ./bankers
+Enter number of processes: 5
+Enter number of resource types: 3
+Enter Allocation matrix:
+0 1 0
+2 0 0
+3 0 2
+2 1 1
+0 0 2
+Enter Max matrix:
+7 5 3
+3 2 2
+9 0 2
+2 2 2
+4 3 3
+Enter Available resources:
+3 3 2
+Need matrix:
+7 4 3
+1 2 2
+6 0 0
+0 1 1
+4 3 1
+System is in a SAFE state.
+Safe sequence: P1 -> P3 -> P4 -> P0 -> P2
+
+======================================================================
+NOTES
+======================================================================
+Input used (classic example): 5 processes, 3 resources.
+Allocation: P0 0 1 0 | P1 2 0 0 | P2 3 0 2 | P3 2 1 1 | P4 0 0 2
+Max:        P0 7 5 3 | P1 3 2 2 | P2 9 0 2 | P3 2 2 2 | P4 4 3 3
+Available:  3 3 2

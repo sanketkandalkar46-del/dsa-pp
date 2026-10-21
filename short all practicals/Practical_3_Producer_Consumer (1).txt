@@ -1,0 +1,75 @@
+======================================================================
+PRACTICAL 3: Thread Synchronization - Producer Consumer (Semaphores + Mutex)
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Solve the producer-consumer problem using counting semaphores and a mutex with pthreads.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p3 && cd ~/os/p3
+nano producer_consumer.c      # paste code
+gcc producer_consumer.c -o producer_consumer -pthread     # -pthread is REQUIRED
+./producer_consumer
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: producer_consumer.c -----
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <unistd.h>
+#define N 3
+int buf[N], in, out;
+sem_t empty, full;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+void *producer(void *a) {
+    for (int i = 1; i <= 5; i++) {
+        sem_wait(&empty); pthread_mutex_lock(&m);
+        buf[in] = i; in = (in + 1) % N; printf("Produced %d\n", i);
+        pthread_mutex_unlock(&m); sem_post(&full);
+        usleep(100000);
+    }
+    return 0;
+}
+void *consumer(void *a) {
+    for (int i = 1; i <= 5; i++) {
+        sem_wait(&full); pthread_mutex_lock(&m);
+        int x = buf[out]; out = (out + 1) % N; printf("Consumed %d\n", x);
+        pthread_mutex_unlock(&m); sem_post(&empty);
+        usleep(150000);
+    }
+    return 0;
+}
+int main() {
+    pthread_t p, c;
+    sem_init(&empty, 0, N); sem_init(&full, 0, 0);
+    pthread_create(&p, 0, producer, 0); pthread_create(&c, 0, consumer, 0);
+    pthread_join(p, 0); pthread_join(c, 0);
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+compiled OK
+Produced 1
+Consumed 1
+Produced 2
+Consumed 2
+Produced 3
+Consumed 3
+Produced 4
+Produced 5
+Consumed 4
+Consumed 5
+
+======================================================================
+NOTES
+======================================================================
+Buffer size = 3, items = 5. empty_slots / full_slots are counting semaphores; mutex protects the buffer. Order of lines may vary slightly each run.

@@ -1,0 +1,187 @@
+======================================================================
+PRACTICAL 2: Process Management - fork(), wait(), Zombie and Orphan
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Demonstrate fork() and wait(). Parent sorts integers (ascending) and waits for the child, which sorts them
+(descending). Also demonstrate ZOMBIE and ORPHAN process states.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p2 && cd ~/os/p2
+nano process_sort.c       # paste code 1
+nano zombie_demo.c        # paste code 2
+nano orphan_demo.c        # paste code 3
+
+# --- Part A: fork + wait + sorting ---
+gcc process_sort.c -o process_sort
+./process_sort
+
+# --- Part B: Zombie (open 2 terminals, or use & as below) ---
+gcc zombie_demo.c -o zombie_demo
+./zombie_demo &                         # run in background
+ps -o pid,ppid,stat,cmd --ppid $!       # within 15 seconds: STAT 'Z' = zombie
+
+# --- Part C: Orphan ---
+gcc orphan_demo.c -o orphan_demo
+./orphan_demo                           # child's PPID changes to 1 (init/systemd)
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: process_sort.c -----
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#define MAX 50
+
+void sort_ascending(int a[], int n) {
+    int i, j, temp;
+    for (i = 0; i < n - 1; i++)
+        for (j = 0; j < n - i - 1; j++)
+            if (a[j] > a[j + 1]) {
+                temp = a[j]; a[j] = a[j + 1]; a[j + 1] = temp;
+            }
+}
+
+void sort_descending(int a[], int n) {
+    int i, j, temp;
+    for (i = 0; i < n - 1; i++)
+        for (j = 0; j < n - i - 1; j++)
+            if (a[j] < a[j + 1]) {
+                temp = a[j]; a[j] = a[j + 1]; a[j + 1] = temp;
+            }
+}
+
+void print_array(const char *label, int a[], int n) {
+    int i;
+    printf("%s", label);
+    for (i = 0; i < n; i++) printf("%s%d", i ? " " : "", a[i]);
+    printf("\n");
+}
+
+int main(void) {
+    int values[MAX], n, i;
+    pid_t pid;
+
+    printf("Enter number of integers (1-%d): ", MAX);
+    if (scanf("%d", &n) != 1 || n < 1 || n > MAX) {
+        fprintf(stderr, "Invalid number of integers.\n");
+        return 1;
+    }
+    printf("Enter %d integers: ", n);
+    for (i = 0; i < n; i++) {
+        if (scanf("%d", &values[i]) != 1) {
+            fprintf(stderr, "Invalid integer input.\n");
+            return 1;
+        }
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        sort_descending(values, n);
+        print_array("Child sorted descending: ", values, n);
+        fflush(stdout);
+        _exit(0);
+    } else {
+        int status;
+        sort_ascending(values, n);
+        print_array("Parent sorted ascending: ", values, n);
+        waitpid(pid, &status, 0);
+        printf("Parent: child process has finished.\n");
+    }
+    return 0;
+}
+
+----- File name: zombie_demo.c -----
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+int main(void) {
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); return 1; }
+
+    if (pid == 0) {
+        printf("Child (PID %d) exits now.\n", getpid());
+        fflush(stdout);
+        _exit(0);
+    }
+
+    printf("Parent (PID %d) sleeping for 15 seconds before wait().\n", getpid());
+    printf("During this time, inspect the child using: ps -o pid,ppid,stat,cmd -p %d\n", pid);
+    fflush(stdout);
+    sleep(15);
+    waitpid(pid, NULL, 0);
+    printf("Parent called wait(); zombie entry is now collected.\n");
+    return 0;
+}
+
+----- File name: orphan_demo.c -----
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(void) {
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); return 1; }
+
+    if (pid > 0) {
+        printf("Parent (PID %d) exits; child PID is %d.\n", getpid(), pid);
+        fflush(stdout);
+        return 0;
+    }
+
+    printf("Child started: PID=%d, PPID=%d\n", getpid(), getppid());
+    fflush(stdout);
+    sleep(3);
+    printf("Child after parent exit: PID=%d, new PPID=%d\n", getpid(), getppid());
+    return 0;
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- Part A: process_sort (input: 5 numbers 64 25 12 22 11) ---
+compiled OK
+Enter number of integers (1-50): 5
+Enter 5 integers: 64 25 12 22 11
+Parent sorted ascending: 11 12 22 25 64
+Child sorted descending: 64 25 22 12 11
+Parent: child process has finished.
+
+--- Part B: zombie_demo (child PID 150 shows state Z = defunct) ---
+Child (PID 150) exits now.
+Parent (PID 148) sleeping for 15 seconds before wait().
+During this time, inspect the child using: ps -o pid,ppid,stat,cmd -p 150
+--- ps output while parent sleeps ---
+  PID  PPID STAT CMD
+  150   148 Z+   [zombie_demo] <defunct>
+
+--- Part C: orphan_demo (child's PPID becomes 1 after parent exits) ---
+Parent (PID 153) exits; child PID is 154.
+Child started: PID=154, PPID=153
+
+(shell prompt returned; waiting for child...)
+Child after parent exit: PID=154, new PPID=1
+
+======================================================================
+NOTES
+======================================================================
+Zombie  = child finished, but parent has not called wait() yet (STAT shows Z / <defunct>).
+Orphan  = parent finished before child; child is adopted by init/systemd (PPID = 1; on some Ubuntu desktops it may be another PID like your user systemd).
+PIDs in your output will be different - that is normal.

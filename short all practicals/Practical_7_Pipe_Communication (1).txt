@@ -1,0 +1,67 @@
+======================================================================
+PRACTICAL 7: Interprocess Communication - Pipes (Parent and Child), Full Duplex
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Parent writes a file pathname on pipe 1. Child reads it, reads the file, and writes the contents on pipe 2.
+Parent reads pipe 2 and displays the contents.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p7 && cd ~/os/p7
+printf 'Hello from file.txt\nThis is line two.\n' > file.txt    # create a test file
+nano practical7.c
+gcc practical7.c -o practical7
+./practical7                 # enter: file.txt
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: practical7.c -----
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+int main() {
+    int p1[2], p2[2], n; char path[256], buf[1024];
+    pipe(p1); pipe(p2);
+    if (fork() == 0) {                          /* child */
+        read(p1[0], path, 255); path[strcspn(path, "\n")] = 0;
+        int fd = open(path, O_RDONLY);
+        if (fd < 0) write(p2[1], "File not found\n", 15);
+        else while ((n = read(fd, buf, 1024)) > 0) write(p2[1], buf, n);
+        return 0;
+    }
+    printf("Enter file path: "); fgets(path, 256, stdin);   /* parent */
+    write(p1[1], path, strlen(path)); close(p1[1]);
+    close(p2[1]);
+    printf("\nFile contents:\n");
+    while ((n = read(p2[0], buf, 1024)) > 0) write(1, buf, n);
+    wait(NULL);
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- Run 1: valid file ---
+Enter file path: file.txt
+
+File contents:
+Hello from file.txt
+This is line two.
+
+--- Run 2: file that does not exist ---
+Enter file path: nofile.txt
+
+File contents:
+File not found
+
+======================================================================
+NOTES
+======================================================================
+You can also give a full path, e.g. /home/user/os/p7/file.txt

@@ -1,0 +1,72 @@
+======================================================================
+PRACTICAL 5: Deadlock Avoidance - Banker's Algorithm
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Implement the Banker's Algorithm to check whether the system is in a safe state and print the safe sequence.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p5 && cd ~/os/p5
+nano bankers.c
+gcc bankers.c -o bankers
+./bankers
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: bankers.c -----
+#include <stdio.h>
+int main() {
+    int n, m, i, j, k, c = 0, al[10][10], mx[10][10], av[10], f[10] = {0}, s[10];
+    printf("Processes and Resources: "); scanf("%d %d", &n, &m);
+    printf("Allocation:\n"); for (i = 0; i < n; i++) for (j = 0; j < m; j++) scanf("%d", &al[i][j]);
+    printf("Max:\n");        for (i = 0; i < n; i++) for (j = 0; j < m; j++) scanf("%d", &mx[i][j]);
+    printf("Available:\n");  for (j = 0; j < m; j++) scanf("%d", &av[j]);
+
+    for (k = 0; k < n; k++)
+        for (i = 0; i < n; i++) {
+            if (f[i]) continue;
+            for (j = 0; j < m && mx[i][j] - al[i][j] <= av[j]; j++);   /* need <= available? */
+            if (j == m) {
+                for (j = 0; j < m; j++) av[j] += al[i][j];
+                f[i] = 1; s[c++] = i;
+            }
+        }
+    if (c < n) { printf("UNSAFE state\n"); return 0; }
+    printf("SAFE state. Sequence: ");
+    for (i = 0; i < n; i++) printf("P%d ", s[i]);
+    printf("\n");
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+Processes and Resources: 5 3
+Allocation:
+0 1 0
+2 0 0
+3 0 2
+2 1 1
+0 0 2
+Max:
+7 5 3
+3 2 2
+9 0 2
+2 2 2
+4 3 3
+Available:
+3 3 2
+SAFE state. Sequence: P1 P3 P4 P0 P2
+
+======================================================================
+NOTES
+======================================================================
+Input used (classic example): 5 processes, 3 resources (typed as: 5 3).
+Allocation: P0 0 1 0 | P1 2 0 0 | P2 3 0 2 | P3 2 1 1 | P4 0 0 2
+Max:        P0 7 5 3 | P1 3 2 2 | P2 9 0 2 | P3 2 2 2 | P4 4 3 3
+Available:  3 3 2

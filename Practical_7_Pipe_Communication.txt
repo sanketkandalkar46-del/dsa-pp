@@ -1,0 +1,141 @@
+======================================================================
+PRACTICAL 7: Interprocess Communication - Pipes (Parent and Child), Full Duplex
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Parent writes a file pathname on pipe 1. Child reads it, reads the file, and writes the contents on pipe 2.
+Parent reads pipe 2 and displays the contents.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p7 && cd ~/os/p7
+printf 'Hello from file.txt\nThis is line two.\n' > file.txt    # create a test file
+nano practical7.c
+gcc practical7.c -o practical7
+./practical7                 # enter: file.txt
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: practical7.c -----
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+
+#define PATH_SIZE 512
+#define BUFFER_SIZE 1024
+
+static int write_all(int fd, const void *data, size_t length) {
+    const char *p = (const char *)data;
+    while (length > 0) {
+        ssize_t n = write(fd, p, length);
+        if (n < 0) return -1;
+        p += n;
+        length -= (size_t)n;
+    }
+    return 0;
+}
+
+int main(void) {
+    int fd1[2], fd2[2];
+    char path[PATH_SIZE], buf[BUFFER_SIZE];
+    ssize_t n;
+    pid_t pid;
+
+    if (pipe(fd1) == -1 || pipe(fd2) == -1) {
+        perror("pipe");
+        return 1;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        close(fd1[1]);
+        close(fd2[0]);
+
+        size_t used = 0;
+        while (used < sizeof(path) - 1) {
+            n = read(fd1[0], path + used, sizeof(path) - 1 - used);
+            if (n <= 0) break;
+            used += (size_t)n;
+            if (memchr(path, '\n', used) != NULL) break;
+        }
+        path[used] = '\0';
+        close(fd1[0]);
+        path[strcspn(path, "\n")] = '\0';
+
+        int file_fd = open(path, O_RDONLY);
+        if (file_fd < 0) {
+            const char *message = "File not found or cannot be opened.\n";
+            write_all(fd2[1], message, strlen(message));
+        } else {
+            while ((n = read(file_fd, buf, sizeof(buf))) > 0) {
+                if (write_all(fd2[1], buf, (size_t)n) == -1) {
+                    perror("write to pipe");
+                    break;
+                }
+            }
+            close(file_fd);
+        }
+        close(fd2[1]);
+        _exit(0);
+    }
+
+    close(fd1[0]);
+    close(fd2[1]);
+
+    printf("Enter file path: ");
+    fflush(stdout);
+    if (fgets(path, sizeof(path), stdin) == NULL) {
+        fprintf(stderr, "Invalid input.\n");
+        close(fd1[1]);
+        close(fd2[0]);
+        waitpid(pid, NULL, 0);
+        return 1;
+    }
+    if (write_all(fd1[1], path, strlen(path)) == -1) perror("write pathname");
+    close(fd1[1]);
+
+    printf("\nFile contents:\n");
+    while ((n = read(fd2[0], buf, sizeof(buf))) > 0) {
+        if (write_all(STDOUT_FILENO, buf, (size_t)n) == -1) {
+            perror("write stdout");
+            break;
+        }
+    }
+    close(fd2[0]);
+    waitpid(pid, NULL, 0);
+    return 0;
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- Run 1: valid file ---
+Enter file path: file.txt
+
+File contents:
+Hello from file.txt
+This is line two.
+
+--- Run 2: file that does not exist ---
+Enter file path: nofile.txt
+
+File contents:
+File not found or cannot be opened.
+
+======================================================================
+NOTES
+======================================================================
+You can also give a full path, e.g. /home/user/os/p7/file.txt

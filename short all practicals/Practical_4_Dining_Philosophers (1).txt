@@ -1,0 +1,78 @@
+======================================================================
+PRACTICAL 4: Deadlock Avoidance - Dining Philosophers (Semaphores)
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Deadlock-free Dining Philosophers: allow at most N-1 philosophers to try to eat at the same time (room semaphore).
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p4 && cd ~/os/p4
+nano dining_philosophers.c      # paste code
+gcc dining_philosophers.c -o dining_philosophers -pthread
+./dining_philosophers
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: dining_philosophers.c -----
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <unistd.h>
+#define N 5
+sem_t f[N], room;       /* f = forks, room allows only N-1 philosophers */
+
+void *phil(void *a) {
+    int i = *(int *)a;
+    for (int r = 0; r < 2; r++) {
+        printf("Philosopher %d thinking\n", i + 1); usleep(100000);
+        sem_wait(&room); sem_wait(&f[i]); sem_wait(&f[(i + 1) % N]);
+        printf("Philosopher %d eating\n", i + 1); usleep(100000);
+        sem_post(&f[(i + 1) % N]); sem_post(&f[i]); sem_post(&room);
+    }
+    return 0;
+}
+int main() {
+    pthread_t t[N]; int id[N];
+    sem_init(&room, 0, N - 1);
+    for (int i = 0; i < N; i++) sem_init(&f[i], 0, 1);
+    for (int i = 0; i < N; i++) { id[i] = i; pthread_create(&t[i], 0, phil, &id[i]); }
+    for (int i = 0; i < N; i++) pthread_join(t[i], 0);
+    printf("All done\n");
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+compiled OK
+Philosopher 1 thinking
+Philosopher 2 thinking
+Philosopher 3 thinking
+Philosopher 4 thinking
+Philosopher 5 thinking
+Philosopher 2 eating
+Philosopher 1 eating
+Philosopher 2 thinking
+Philosopher 5 eating
+Philosopher 1 thinking
+Philosopher 4 eating
+Philosopher 5 thinking
+Philosopher 4 thinking
+Philosopher 3 eating
+Philosopher 2 eating
+Philosopher 3 thinking
+Philosopher 1 eating
+Philosopher 5 eating
+Philosopher 4 eating
+Philosopher 3 eating
+All done
+
+======================================================================
+NOTES
+======================================================================
+5 philosophers, 3 rounds each. 'room' semaphore = 4 prevents circular wait (no deadlock). Output order differs on every run.

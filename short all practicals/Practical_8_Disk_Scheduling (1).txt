@@ -1,0 +1,82 @@
+======================================================================
+PRACTICAL 8: Disk Scheduling - SSTF, SCAN, C-LOOK
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Implement SSTF, SCAN and C-LOOK disk scheduling with the head initially moving away from the spindle (towards higher cylinder numbers).
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p8 && cd ~/os/p8
+nano disk_scheduling.c
+gcc disk_scheduling.c -o disk_scheduling
+./disk_scheduling
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: disk_scheduling.c -----
+#include <stdio.h>
+#include <stdlib.h>
+int n, h, sz, r[50], s[50];                     /* s = sorted requests */
+int cmp(const void *a, const void *b) { return *(int *)a - *(int *)b; }
+
+void sstf() {
+    int d[50] = {0}, cur = h, t = 0, i, k, m, x = 0;
+    printf("\nSSTF: %d", h);
+    for (k = 0; k < n; k++) {
+        for (m = 1000000, i = 0; i < n; i++)
+            if (!d[i] && abs(r[i] - cur) < m) { m = abs(r[i] - cur); x = i; }
+        d[x] = 1; t += m; cur = r[x]; printf(" -> %d", cur);
+    }
+    printf("\nTotal head movement = %d\n", t);
+}
+void scan() {                                   /* moving toward higher cylinders */
+    int cur = h, t = 0, i;
+    printf("\nSCAN: %d", h);
+    for (i = 0; i < n; i++) if (s[i] >= h) { t += s[i] - cur; cur = s[i]; printf(" -> %d", cur); }
+    if (cur != sz - 1) { t += sz - 1 - cur; cur = sz - 1; printf(" -> %d", cur); }
+    for (i = n - 1; i >= 0; i--) if (s[i] < h) { t += cur - s[i]; cur = s[i]; printf(" -> %d", cur); }
+    printf("\nTotal head movement = %d\n", t);
+}
+void clook() {
+    int cur = h, t = 0, i;
+    printf("\nC-LOOK: %d", h);
+    for (i = 0; i < n; i++) if (s[i] >= h) { t += s[i] - cur; cur = s[i]; printf(" -> %d", cur); }
+    for (i = 0; i < n; i++) if (s[i] < h)  { t += abs(cur - s[i]); cur = s[i]; printf(" -> %d", cur); }
+    printf("\nTotal head movement = %d\n", t);
+}
+int main() {
+    printf("Total cylinders: "); scanf("%d", &sz);
+    printf("Number of requests: "); scanf("%d", &n);
+    printf("Request queue: "); for (int i = 0; i < n; i++) { scanf("%d", &r[i]); s[i] = r[i]; }
+    printf("Initial head position: "); scanf("%d", &h);
+    qsort(s, n, sizeof(int), cmp);
+    sstf(); scan(); clook();
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+Total cylinders: 200
+Number of requests: 8
+Request queue: 98 183 37 122 14 124 65 67
+Initial head position: 53
+
+SSTF: 53 -> 65 -> 67 -> 37 -> 14 -> 98 -> 122 -> 124 -> 183
+Total head movement = 236
+
+SCAN: 53 -> 65 -> 67 -> 98 -> 122 -> 124 -> 183 -> 199 -> 37 -> 14
+Total head movement = 331
+
+C-LOOK: 53 -> 65 -> 67 -> 98 -> 122 -> 124 -> 183 -> 14 -> 37
+Total head movement = 322
+
+======================================================================
+NOTES
+======================================================================
+Input: 200 cylinders (0-199), requests 98 183 37 122 14 124 65 67, head at 53.

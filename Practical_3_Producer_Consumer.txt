@@ -1,0 +1,113 @@
+======================================================================
+PRACTICAL 3: Thread Synchronization - Producer Consumer (Semaphores + Mutex)
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Solve the producer-consumer problem using counting semaphores and a mutex with pthreads.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p3 && cd ~/os/p3
+nano producer_consumer.c      # paste code
+gcc producer_consumer.c -o producer_consumer -pthread     # -pthread is REQUIRED
+./producer_consumer
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: producer_consumer.c -----
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define BUFFER_SIZE 3
+#define ITEMS 5
+
+int buffer[BUFFER_SIZE];
+int in = 0, out = 0;
+sem_t empty_slots, full_slots;
+pthread_mutex_t mutex;
+
+void *producer(void *arg) {
+    (void)arg;
+    for (int item = 1; item <= ITEMS; item++) {
+        sem_wait(&empty_slots);
+        pthread_mutex_lock(&mutex);
+
+        buffer[in] = item;
+        in = (in + 1) % BUFFER_SIZE;
+        printf("Producer produced: %d\n", item);
+
+        pthread_mutex_unlock(&mutex);
+        sem_post(&full_slots);
+        usleep(100000);
+    }
+    return NULL;
+}
+
+void *consumer(void *arg) {
+    (void)arg;
+    for (int i = 1; i <= ITEMS; i++) {
+        sem_wait(&full_slots);
+        pthread_mutex_lock(&mutex);
+
+        int item = buffer[out];
+        out = (out + 1) % BUFFER_SIZE;
+        printf("Consumer consumed: %d\n", item);
+
+        pthread_mutex_unlock(&mutex);
+        sem_post(&empty_slots);
+        usleep(150000);
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t p, c;
+    if (sem_init(&empty_slots, 0, BUFFER_SIZE) != 0 ||
+        sem_init(&full_slots, 0, 0) != 0 ||
+        pthread_mutex_init(&mutex, NULL) != 0) {
+        perror("Synchronization initialization failed");
+        return 1;
+    }
+
+    if (pthread_create(&p, NULL, producer, NULL) != 0 ||
+        pthread_create(&c, NULL, consumer, NULL) != 0) {
+        perror("pthread_create");
+        return 1;
+    }
+
+    pthread_join(p, NULL);
+    pthread_join(c, NULL);
+
+    sem_destroy(&empty_slots);
+    sem_destroy(&full_slots);
+    pthread_mutex_destroy(&mutex);
+    return 0;
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+compiled OK
+Producer produced: 1
+Consumer consumed: 1
+Producer produced: 2
+Consumer consumed: 2
+Producer produced: 3
+Producer produced: 4
+Consumer consumed: 3
+Producer produced: 5
+Consumer consumed: 4
+Consumer consumed: 5
+
+======================================================================
+NOTES
+======================================================================
+Buffer size = 3, items = 5. empty_slots / full_slots are counting semaphores; mutex protects the buffer. Order of lines may vary slightly each run.

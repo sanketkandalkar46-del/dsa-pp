@@ -1,0 +1,155 @@
+======================================================================
+PRACTICAL 6: Interprocess Communication - FIFOs (Named Pipes), Full Duplex
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Process 1 reads sentences and sends them via pipe1. Process 2 counts characters, words, lines, saves them in
+result.txt and sends the file contents back via pipe2. Process 1 displays them.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p6 && cd ~/os/p6
+nano process1.c          # paste code 1
+nano process2.c          # paste code 2
+gcc process1.c -o process1
+gcc process2.c -o process2
+mkfifo pipe1 pipe2       # create the two named pipes
+
+# TERMINAL 1 (start this first):
+./process2
+
+# TERMINAL 2 (open a new terminal, cd ~/os/p6):
+./process1
+
+# Stop process2 with Ctrl+C when done. Then view the file and clean up:
+cat result.txt
+rm pipe1 pipe2
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: process1.c -----
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define SIZE 1024
+
+int main(void) {
+    char sentence[SIZE], result[SIZE];
+    int fd, n;
+
+    while (1) {
+        printf("Enter a sentence (type exit to stop): ");
+        fflush(stdout);
+        if (fgets(sentence, sizeof(sentence), stdin) == NULL) break;
+        if (strcmp(sentence, "exit\n") == 0 || strcmp(sentence, "exit") == 0) break;
+
+        fd = open("pipe1", O_WRONLY);
+        if (fd < 0) { perror("open pipe1"); return 1; }
+        size_t len = strlen(sentence);
+        if (write(fd, sentence, len) != (ssize_t)len) {
+            perror("write pipe1"); close(fd); return 1;
+        }
+        close(fd);
+
+        fd = open("pipe2", O_RDONLY);
+        if (fd < 0) { perror("open pipe2"); return 1; }
+        n = (int)read(fd, result, sizeof(result) - 1);
+        close(fd);
+        if (n < 0) { perror("read pipe2"); return 1; }
+        result[n] = '\0';
+        printf("\nResults from Process 2:\n%s\n", result);
+    }
+    return 0;
+}
+
+----- File name: process2.c -----
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <ctype.h>
+
+#define SIZE 1024
+
+int main(void) {
+    char sentence[SIZE], result[SIZE];
+    int fd, n;
+
+    while (1) {
+        fd = open("pipe1", O_RDONLY);
+        if (fd < 0) { perror("open pipe1"); return 1; }
+        n = (int)read(fd, sentence, sizeof(sentence) - 1);
+        close(fd);
+        if (n <= 0) continue;
+        sentence[n] = '\0';
+
+        int characters = n, words = 0, lines = 0, in_word = 0;
+        for (int i = 0; i < n; i++) {
+            if (sentence[i] == '\n') lines++;
+            if (isspace((unsigned char)sentence[i])) {
+                in_word = 0;
+            } else if (!in_word) {
+                words++;
+                in_word = 1;
+            }
+        }
+
+        FILE *file = fopen("result.txt", "w");
+        if (file == NULL) { perror("fopen result.txt"); return 1; }
+        fprintf(file, "Characters: %d\nWords: %d\nLines: %d\n",
+                characters, words, lines);
+        fclose(file);
+
+        file = fopen("result.txt", "r");
+        if (file == NULL) { perror("open result.txt"); return 1; }
+        size_t r = fread(result, 1, sizeof(result) - 1, file);
+        result[r] = '\0';
+        fclose(file);
+
+        fd = open("pipe2", O_WRONLY);
+        if (fd < 0) { perror("open pipe2"); return 1; }
+        if (write(fd, result, r) != (ssize_t)r) {
+            perror("write pipe2"); close(fd); return 1;
+        }
+        close(fd);
+    }
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- TERMINAL 2 (./process1) ---
+Enter a sentence (type exit to stop): Hello Operating System
+
+Results from Process 2:
+Characters: 23
+Words: 3
+Lines: 1
+
+Enter a sentence (type exit to stop): I love Ubuntu Linux
+
+Results from Process 2:
+Characters: 20
+Words: 4
+Lines: 1
+
+Enter a sentence (type exit to stop): exit
+
+--- cat result.txt (last sentence's result) ---
+Characters: 20
+Words: 4
+Lines: 1
+prw-r--r-- 1 root root 0 Oct 21 06:59 pipe1
+prw-r--r-- 1 root root 0 Oct 21 06:59 pipe2
+
+======================================================================
+NOTES
+======================================================================
+Terminal 1 (./process2) shows nothing - it only waits and works in the background. 'p' at the start of ls output means named pipe.

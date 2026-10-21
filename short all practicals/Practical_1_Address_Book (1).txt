@@ -1,0 +1,103 @@
+======================================================================
+PRACTICAL 1: Shell Programming - Address Book
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Write a shell script to implement an address book with: Create, View, Insert, Delete, Modify, Exit.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+sudo apt update
+sudo apt install build-essential -y     # (only once)
+mkdir -p ~/os && cd ~/os
+nano addressbook.sh                     # paste the code below, Ctrl+O, Enter, Ctrl+X to save
+chmod +x addressbook.sh                 # give permission to run
+./addressbook.sh                        # run the script
+cat addressbook.txt                     # (optional) see the data file
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: addressbook.sh -----
+#!/bin/bash
+F=addressbook.txt
+while true; do
+  echo -e "\n1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit"
+  read -p "Choice: " c
+  case $c in
+    1) echo "NAME | PHONE | EMAIL" > $F; echo "Created" ;;
+    2) cat $F ;;
+    3) read -p "Name: " n; read -p "Phone: " p; read -p "Email: " e
+       echo "$n | $p | $e" >> $F; echo "Inserted" ;;
+    4) read -p "Name to delete: " n
+       grep -v "^$n |" $F > t.txt; mv t.txt $F; echo "Deleted" ;;
+    5) read -p "Name to modify: " n; read -p "New name: " a
+       read -p "New phone: " p; read -p "New email: " e
+       sed -i "s/^$n |.*/$a | $p | $e/" $F; echo "Modified" ;;
+    6) break ;;
+    *) echo "Invalid choice" ;;
+  esac
+done
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 1
+Created
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 3
+Name: Rahul Patil
+Phone: 9876543210
+Email: rahul@gmail.com
+Inserted
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 3
+Name: Sneha Joshi
+Phone: 9123456780
+Email: sneha@gmail.com
+Inserted
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 2
+NAME | PHONE | EMAIL
+Rahul Patil | 9876543210 | rahul@gmail.com
+Sneha Joshi | 9123456780 | sneha@gmail.com
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 5
+Name to modify: Sneha Joshi
+New name: Sneha Kulkarni
+New phone: 9123456799
+New email: sneha.k@gmail.com
+Modified
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 2
+NAME | PHONE | EMAIL
+Rahul Patil | 9876543210 | rahul@gmail.com
+Sneha Kulkarni | 9123456799 | sneha.k@gmail.com
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 4
+Name to delete: Rahul Patil
+Deleted
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 2
+NAME | PHONE | EMAIL
+Sneha Kulkarni | 9123456799 | sneha.k@gmail.com
+
+1.Create 2.View 3.Insert 4.Delete 5.Modify 6.Exit
+Choice: 6
+
+======================================================================
+NOTES
+======================================================================
+Choose 1 (Create) first, then 3 (Insert), 2 (View), 5 (Modify), 4 (Delete), 6 (Exit).

@@ -1,0 +1,101 @@
+======================================================================
+PRACTICAL 6: Interprocess Communication - FIFOs (Named Pipes), Full Duplex
+======================================================================
+
+======================================================================
+AIM
+======================================================================
+Process 1 reads sentences and sends them via pipe1. Process 2 counts characters, words, lines, saves them in
+result.txt and sends the file contents back via pipe2. Process 1 displays them.
+
+======================================================================
+STEP 1: UBUNTU COMMANDS (type these in Terminal)
+======================================================================
+mkdir -p ~/os/p6 && cd ~/os/p6
+nano process1.c          # paste code 1
+nano process2.c          # paste code 2
+gcc process1.c -o process1
+gcc process2.c -o process2
+mkfifo pipe1 pipe2       # create the two named pipes
+
+# TERMINAL 1 (start this first):
+./process2
+
+# TERMINAL 2 (open a new terminal, cd ~/os/p6):
+./process1
+
+# Stop process2 with Ctrl+C when done. Then view the file and clean up:
+cat result.txt
+rm pipe1 pipe2
+
+======================================================================
+STEP 2: CODE
+======================================================================
+
+----- File name: process1.c -----
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+int main() {
+    char s[1024], r[1024]; int fd, n;
+    while (1) {
+        printf("Enter sentence (exit to stop): ");
+        if (!fgets(s, 1024, stdin) || !strcmp(s, "exit\n")) break;
+        fd = open("pipe1", O_WRONLY); write(fd, s, strlen(s)); close(fd);
+        fd = open("pipe2", O_RDONLY); n = read(fd, r, 1023); close(fd);
+        r[n] = 0; printf("Result:\n%s\n", r);
+    }
+}
+
+----- File name: process2.c -----
+#include <stdio.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
+int main() {
+    char s[1024], r[1024]; int fd, n, i, w, l;
+    while (1) {
+        fd = open("pipe1", O_RDONLY); n = read(fd, s, 1023); close(fd);
+        if (n <= 0) continue;
+        s[n] = 0; w = l = 0;
+        for (i = 0; i < n; i++) {
+            if (s[i] == '\n') l++;
+            if (!isspace(s[i]) && (i == 0 || isspace(s[i-1]))) w++;
+        }
+        FILE *f = fopen("result.txt", "w");
+        fprintf(f, "Characters: %d\nWords: %d\nLines: %d\n", n, w, l); fclose(f);
+        f = fopen("result.txt", "r"); n = fread(r, 1, 1023, f); fclose(f);
+        fd = open("pipe2", O_WRONLY); write(fd, r, n); close(fd);
+    }
+}
+
+======================================================================
+STEP 3: OUTPUT (real output from running this code)
+======================================================================
+--- TERMINAL 2 (./process1) ---
+Enter sentence (exit to stop): Hello Operating System
+Result:
+Characters: 23
+Words: 3
+Lines: 1
+
+Enter sentence (exit to stop): I love Ubuntu Linux
+Result:
+Characters: 20
+Words: 4
+Lines: 1
+
+Enter sentence (exit to stop): exit
+
+--- cat result.txt (last sentence's result) ---
+Characters: 20
+Words: 4
+Lines: 1
+prw-r--r-- 1 root root 0 Oct 21 07:06 pipe1
+prw-r--r-- 1 root root 0 Oct 21 07:06 pipe2
+
+======================================================================
+NOTES
+======================================================================
+Terminal 1 (./process2) shows nothing - it only waits and works in the background. 'p' at the start of ls output means named pipe.
